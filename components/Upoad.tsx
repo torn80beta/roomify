@@ -31,7 +31,6 @@ const Upoad = ({ onComplete }: Props) => {
   }, []);
 
   const startProgress = () => {
-    // clear any existing
     if (intervalRef.current) window.clearInterval(intervalRef.current);
 
     intervalRef.current = window.setInterval(() => {
