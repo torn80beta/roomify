@@ -23,7 +23,7 @@ const Upoad = ({ onComplete }: Props) => {
   const timeoutRef = useRef<number | null>(null);
   const base64Ref = useRef<string | null>(null);
 
-  //
+  // Stale closure bug fix
   const completedRef = useRef(false);
   //
 
@@ -37,7 +37,7 @@ const Upoad = ({ onComplete }: Props) => {
   const startProgress = () => {
     if (intervalRef.current) window.clearInterval(intervalRef.current);
 
-    //
+    //Stale closure bug fix
     completedRef.current = false;
     //
 
@@ -48,7 +48,7 @@ const Upoad = ({ onComplete }: Props) => {
         if (next === 100 && intervalRef.current) {
           window.clearInterval(intervalRef.current);
           intervalRef.current = null;
-          //
+          //Stale closure bug fix
           completedRef.current = true;
           //
 
@@ -75,6 +75,8 @@ const Upoad = ({ onComplete }: Props) => {
       const result = reader.result as string | null;
       if (result) base64Ref.current = result;
       // If progress already reached 100, ensure we still call onComplete after delay
+
+      // Stale closure bug fix
       // if (progress === 100 && onComplete && base64Ref.current) {
       if (completedRef.current && onComplete && base64Ref.current) {
         timeoutRef.current = window.setTimeout(() => {
