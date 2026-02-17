@@ -23,6 +23,10 @@ const Upoad = ({ onComplete }: Props) => {
   const timeoutRef = useRef<number | null>(null);
   const base64Ref = useRef<string | null>(null);
 
+  //
+  const completedRef = useRef(false);
+  //
+
   useEffect(() => {
     return () => {
       if (intervalRef.current) window.clearInterval(intervalRef.current);
@@ -33,6 +37,10 @@ const Upoad = ({ onComplete }: Props) => {
   const startProgress = () => {
     if (intervalRef.current) window.clearInterval(intervalRef.current);
 
+    //
+    completedRef.current = false;
+    //
+
     intervalRef.current = window.setInterval(() => {
       setProgress((prev) => {
         const next = Math.min(100, prev + PROGRESS_STEP);
@@ -40,6 +48,9 @@ const Upoad = ({ onComplete }: Props) => {
         if (next === 100 && intervalRef.current) {
           window.clearInterval(intervalRef.current);
           intervalRef.current = null;
+          //
+          completedRef.current = true;
+          //
 
           // After reaching 100, wait REDIRECT_DELAY_MS then call onComplete
           timeoutRef.current = window.setTimeout(() => {
@@ -64,7 +75,8 @@ const Upoad = ({ onComplete }: Props) => {
       const result = reader.result as string | null;
       if (result) base64Ref.current = result;
       // If progress already reached 100, ensure we still call onComplete after delay
-      if (progress === 100 && onComplete && base64Ref.current) {
+      // if (progress === 100 && onComplete && base64Ref.current) {
+      if (completedRef.current && onComplete && base64Ref.current) {
         timeoutRef.current = window.setTimeout(() => {
           if (onComplete && base64Ref.current)
             onComplete(base64Ref.current as string);
