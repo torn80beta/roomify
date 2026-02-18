@@ -23,6 +23,8 @@ const Upoad = ({ onComplete }: Props) => {
   const base64Ref = useRef<string | null>(null);
   const completedRef = useRef(false);
 
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg"];
+
   useEffect(() => {
     return () => {
       if (intervalRef.current) window.clearInterval(intervalRef.current);
@@ -61,10 +63,21 @@ const Upoad = ({ onComplete }: Props) => {
 
     const reader = new FileReader();
     reader.onerror = () => {
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (timeoutRef.current) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      completedRef.current = false;
+
       setFile(null);
       setProgress(0);
       base64Ref.current = null;
     };
+
     reader.onload = () => {
       const result = reader.result as string | null;
       if (result) base64Ref.current = result;
@@ -86,8 +99,9 @@ const Upoad = ({ onComplete }: Props) => {
     setIsDragging(false);
     if (!isSignedIn) return;
     const dropped = e.dataTransfer?.files[0];
-    const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
-    if (dropped && allowedTypes.includes(dropped.type)) processFile(dropped);
+    // const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+    if (dropped && ALLOWED_IMAGE_TYPES.includes(dropped.type))
+      processFile(dropped);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -101,9 +115,13 @@ const Upoad = ({ onComplete }: Props) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isSignedIn) return;
     const selected = e.target.files?.[0];
-    if (selected) processFile(selected);
+    // if (selected) processFile(selected);
+    if (selected && ALLOWED_IMAGE_TYPES.includes(selected.type)) {
+      processFile(selected);
+    } else {
+      e.target.value = "";
+    }
   };
-
 
   return (
     <div className="upload">
