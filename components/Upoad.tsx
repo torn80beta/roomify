@@ -32,8 +32,21 @@ const Upoad = ({ onComplete }: Props) => {
     };
   }, []);
 
+  const scheduleComplete = () => {
+    if (timeoutRef.current || !onComplete || !base64Ref.current) return;
+    timeoutRef.current = window.setTimeout(() => {
+      timeoutRef.current = null;
+      if (onComplete && base64Ref.current) onComplete(base64Ref.current);
+    }, REDIRECT_DELAY_MS) as unknown as number;
+  };
+
   const startProgress = () => {
     if (intervalRef.current) window.clearInterval(intervalRef.current);
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
     completedRef.current = false;
 
     intervalRef.current = window.setInterval(() => {
@@ -44,9 +57,7 @@ const Upoad = ({ onComplete }: Props) => {
           window.clearInterval(intervalRef.current);
           intervalRef.current = null;
           completedRef.current = true;
-          timeoutRef.current = window.setTimeout(() => {
-            if (onComplete && base64Ref.current) onComplete(base64Ref.current);
-          }, REDIRECT_DELAY_MS) as unknown as number;
+          scheduleComplete();
         }
 
         return next;
@@ -81,12 +92,8 @@ const Upoad = ({ onComplete }: Props) => {
     reader.onload = () => {
       const result = reader.result as string | null;
       if (result) base64Ref.current = result;
-      // If progress already reached 100, ensure we still call onComplete after delay
-      if (completedRef.current && onComplete && base64Ref.current) {
-        timeoutRef.current = window.setTimeout(() => {
-          if (onComplete && base64Ref.current)
-            onComplete(base64Ref.current as string);
-        }, REDIRECT_DELAY_MS) as unknown as number;
+      if (completedRef.current) {
+        scheduleComplete();
       }
     };
 
@@ -99,7 +106,7 @@ const Upoad = ({ onComplete }: Props) => {
     setIsDragging(false);
     if (!isSignedIn) return;
     const dropped = e.dataTransfer?.files[0];
-    // const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+
     if (dropped && ALLOWED_IMAGE_TYPES.includes(dropped.type))
       processFile(dropped);
   };
@@ -115,7 +122,7 @@ const Upoad = ({ onComplete }: Props) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isSignedIn) return;
     const selected = e.target.files?.[0];
-    // if (selected) processFile(selected);
+
     if (selected && ALLOWED_IMAGE_TYPES.includes(selected.type)) {
       processFile(selected);
     } else {
