@@ -18,14 +18,10 @@ const Upoad = ({ onComplete }: Props) => {
 
   const { isSignedIn } = useOutletContext<AuthContext>();
 
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const intervalRef = useRef<number | null>(null);
   const timeoutRef = useRef<number | null>(null);
   const base64Ref = useRef<string | null>(null);
-
-  // Stale closure bug fix
   const completedRef = useRef(false);
-  //
 
   useEffect(() => {
     return () => {
@@ -36,23 +32,16 @@ const Upoad = ({ onComplete }: Props) => {
 
   const startProgress = () => {
     if (intervalRef.current) window.clearInterval(intervalRef.current);
-
-    //Stale closure bug fix
     completedRef.current = false;
-    //
 
     intervalRef.current = window.setInterval(() => {
       setProgress((prev) => {
         const next = Math.min(100, prev + PROGRESS_STEP);
 
-        if (next === 100 && intervalRef.current) {
+        if (next >= 100 && intervalRef.current) {
           window.clearInterval(intervalRef.current);
           intervalRef.current = null;
-          //Stale closure bug fix
           completedRef.current = true;
-          //
-
-          // After reaching 100, wait REDIRECT_DELAY_MS then call onComplete
           timeoutRef.current = window.setTimeout(() => {
             if (onComplete && base64Ref.current) onComplete(base64Ref.current);
           }, REDIRECT_DELAY_MS) as unknown as number;
@@ -71,13 +60,15 @@ const Upoad = ({ onComplete }: Props) => {
     base64Ref.current = null;
 
     const reader = new FileReader();
+    reader.onerror = () => {
+      setFile(null);
+      setProgress(0);
+      base64Ref.current = null;
+    };
     reader.onload = () => {
       const result = reader.result as string | null;
       if (result) base64Ref.current = result;
       // If progress already reached 100, ensure we still call onComplete after delay
-
-      // Stale closure bug fix
-      // if (progress === 100 && onComplete && base64Ref.current) {
       if (completedRef.current && onComplete && base64Ref.current) {
         timeoutRef.current = window.setTimeout(() => {
           if (onComplete && base64Ref.current)
@@ -94,8 +85,9 @@ const Upoad = ({ onComplete }: Props) => {
     e.preventDefault();
     setIsDragging(false);
     if (!isSignedIn) return;
-    const dropped = e.dataTransfer?.files;
-    if (dropped && dropped.length > 0) processFile(dropped[0]);
+    const dropped = e.dataTransfer?.files[0];
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+    if (dropped && allowedTypes.includes(dropped.type)) processFile(dropped);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -112,14 +104,6 @@ const Upoad = ({ onComplete }: Props) => {
     if (selected) processFile(selected);
   };
 
-  const handleClick = (e: React.MouseEvent) => {
-    if (!isSignedIn) return;
-    const target = e.target as HTMLElement | null;
-    // If the native click originated from the input itself, don't trigger
-    // a programmatic click to avoid opening the file dialog twice.
-    if (target && target.tagName === "INPUT") return;
-    inputRef.current?.click();
-  };
 
   return (
     <div className="upload">
@@ -127,7 +111,6 @@ const Upoad = ({ onComplete }: Props) => {
         <div
           role="button"
           tabIndex={0}
-          onClick={handleClick}
           onDragOver={handleDragOver}
           onDragEnter={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -135,7 +118,6 @@ const Upoad = ({ onComplete }: Props) => {
           className={`dropzone ${isDragging ? "is-dragging" : ""}`}
         >
           <input
-            ref={inputRef}
             type="file"
             className="drop-input"
             accept=".jpeg,.jpg,.png"
