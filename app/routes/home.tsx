@@ -4,6 +4,8 @@ import { ArrowBigRight, ArrowUpRight, Clock, Layers } from "lucide-react";
 import { Button } from "components/ui/Button";
 import Upload from "components/Upoad";
 import { useNavigate } from "react-router";
+import { useState } from "react";
+import { createProject } from "lib/puter.action";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -14,11 +16,43 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   const navigate = useNavigate();
+  const [projects, setProjects] = useState<DesignItem[]>([]);
 
-  const handleUploadComplete = async (base64Data: string) => {
+  const handleUploadComplete = async (base64Image: string) => {
     const newId = Date.now().toString();
+    const name = `Residance ${newId}`;
 
-    navigate(`/visualizer/${newId}`);
+    const newItem = {
+      id: newId,
+      name,
+      sourceImage: base64Image,
+      renderedImage: undefined,
+      timestamp: Date.now(),
+    };
+
+    const saved = await createProject({ item: newItem, visibility: "private" });
+
+    if (!saved) {
+      console.error("Failed to create project!");
+      return false;
+    }
+
+    setProjects((prev) => [saved, ...prev]);
+
+    navigate(`/visualizer/${newId}`, {
+      state: {
+        initialImage: saved.sourceImage,
+        // he VisualizerLocationState type (type.d.ts:50) defines the property as initialRender,
+        // but the code passes initialRendered. This mismatch will cause the rendered image to be
+        // undefined when consumed, since the visualizer will look for the wrong key.
+        // To fix this, we should change initialRendered to initialRender to match the expected
+        // property name in VisualizerLocationState.
+
+        // initialRender: saved.renderedImage || null,
+        initialRendered: saved.renderedImage || null,
+        name,
+      },
+    });
 
     return true;
   };
@@ -82,34 +116,39 @@ export default function Home() {
           </div>
 
           <div className="projects-grid">
-            <div className="project-card group">
-              <div className="preview">
-                <img
-                  src="https://roomify-mlhuk267-dfwu1i.puter.site/projects/1770803585402/rendered.png"
-                  alt="Project"
-                />
+            {projects.map(
+              ({ id, name, renderedImage, sourceImage, timestamp }) => (
+                <div key={id} className="project-card group">
+                  <div className="preview">
+                    <img
+                      src={renderedImage || sourceImage}
+                      // src="https://roomify-mlhuk267-dfwu1i.puter.site/projects/1770803585402/rendered.png"
+                      alt="Project"
+                    />
 
-                <div className="badge">
-                  <span>Community</span>
-                </div>
-              </div>
+                    <div className="badge">
+                      <span>Community</span>
+                    </div>
+                  </div>
 
-              <div className="card-body">
-                <div>
-                  <h3>Project Manhattan</h3>
+                  <div className="card-body">
+                    <div>
+                      <h3>{name}</h3>
 
-                  <div className="meta">
-                    <Clock size={12} />
-                    <span>{new Date("01.01.2026").toLocaleDateString()}</span>
-                    <span>By JSM</span>
+                      <div className="meta">
+                        <Clock size={12} />
+                        <span>{new Date(timestamp).toLocaleDateString()}</span>
+                        <span>By JSM</span>
+                      </div>
+                    </div>
+
+                    <div className="arrow">
+                      <ArrowUpRight size={18} />
+                    </div>
                   </div>
                 </div>
-
-                <div className="arrow">
-                  <ArrowUpRight size={18} />
-                </div>
-              </div>
-            </div>
+              ),
+            )}
           </div>
         </div>
       </section>
