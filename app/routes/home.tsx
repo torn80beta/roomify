@@ -42,6 +42,13 @@ export default function Home() {
     navigate(`/visualizer/${newId}`, {
       state: {
         initialImage: saved.sourceImage,
+        // he VisualizerLocationState type (type.d.ts:50) defines the property as initialRender,
+        // but the code passes initialRendered. This mismatch will cause the rendered image to be
+        // undefined when consumed, since the visualizer will look for the wrong key.
+        // To fix this, we should change initialRendered to initialRender to match the expected
+        // property name in VisualizerLocationState.
+
+        // initialRender: saved.renderedImage || null,
         initialRendered: saved.renderedImage || null,
         name,
       },
